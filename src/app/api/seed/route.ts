@@ -23,6 +23,25 @@ export async function POST() {
       END
     `)
 
+    // Create AppLog table if not exists
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AppLog')
+      BEGIN
+        CREATE TABLE AppLog (
+          AppLogId INT IDENTITY(1,1) PRIMARY KEY,
+          Accion NVARCHAR(100) NOT NULL,
+          Detalle NVARCHAR(500) NULL,
+          Usuario NVARCHAR(50) NOT NULL,
+          IP NVARCHAR(45) NULL,
+          Modulo NVARCHAR(50) NULL,
+          Fecha DATETIME NOT NULL DEFAULT GETDATE()
+        )
+
+        CREATE INDEX IX_AppLog_Fecha ON AppLog(Fecha DESC)
+        CREATE INDEX IX_AppLog_Usuario ON AppLog(Usuario)
+      END
+    `)
+
     // Seed users
     const users = [
       { username: "admin", password: "admin123", nombre: "Administrador", role: "admin" },

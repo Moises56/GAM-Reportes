@@ -143,17 +143,25 @@ export function UsuariosClient({ initialUsers }: UsuariosClientProps) {
     setLoading(false)
   }
 
+  const [togglingId, setTogglingId] = useState<number | null>(null)
+
   const toggleActive = async (user: User) => {
+    setTogglingId(user.id)
     try {
-      await fetch(`/api/users/${user.id}`, {
+      const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ activo: !user.activo }),
       })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || "Error al cambiar estado")
+      }
       router.refresh()
     } catch {
-      // ignore
+      setError("Error de conexión")
     }
+    setTogglingId(null)
   }
 
   const openEdit = (user: User) => {
@@ -178,6 +186,14 @@ export function UsuariosClient({ initialUsers }: UsuariosClientProps) {
           Nuevo Usuario
         </button>
       </div>
+
+      {/* Error display */}
+      {error && !showCreate && !editUser && !passwordUser && (
+        <div className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          {error}
+          <button onClick={() => setError("")} className="ml-2 underline">Cerrar</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -244,10 +260,13 @@ export function UsuariosClient({ initialUsers }: UsuariosClientProps) {
                         </button>
                         <button
                           onClick={() => toggleActive(u)}
-                          className="flex h-7 w-7 items-center justify-center rounded hover:bg-muted"
+                          disabled={togglingId === u.id}
+                          className="flex h-7 w-7 items-center justify-center rounded hover:bg-muted disabled:opacity-50"
                           title={u.activo ? "Desactivar" : "Activar"}
                         >
-                          {u.activo ? (
+                          {togglingId === u.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          ) : u.activo ? (
                             <UserX className="h-3.5 w-3.5 text-red-500" />
                           ) : (
                             <UserCheck className="h-3.5 w-3.5 text-green-600" />

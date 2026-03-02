@@ -46,4 +46,5 @@ export const NAV_ITEMS = [
   { label: "Báscula", href: "/dashboard/bascula", icon: "Scale" },
   { label: "Hospitalarios", href: "/dashboard/hospitalarios", icon: "Hospital" },
   { label: "Usuarios", href: "/dashboard/usuarios", icon: "Users", adminOnly: true },
+  { label: "Bitácora", href: "/dashboard/bitacora", icon: "ScrollText", adminOnly: true },
 ] as const

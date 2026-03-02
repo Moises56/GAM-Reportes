@@ -9,7 +9,7 @@ const FALLBACK_USERS = [
   { username: "operador", password: "oper123", name: "Operador GAM", role: "operador" },
 ] as const
 
-export async function authenticate(username: string, password: string) {
+export async function authenticate(username: string, password: string, ip?: string) {
   // Dynamic import to avoid pulling bcryptjs into layout bundle
   try {
     const { validateUser } = await import("@/lib/queries/users")
@@ -21,8 +21,20 @@ export async function authenticate(username: string, password: string) {
         .setIssuedAt()
         .sign(secret)
 
+      // Log successful login
+      try {
+        const { insertLog } = await import("@/lib/queries/logs")
+        await insertLog({ accion: "Inicio de sesión", usuario: user.username, ip, modulo: "auth" })
+      } catch { /* ignore log errors */ }
+
       return { token, user: { username: user.username, name: user.name, role: user.role } }
     }
+
+    // Log failed login attempt
+    try {
+      const { insertLog } = await import("@/lib/queries/logs")
+      await insertLog({ accion: "Intento de login fallido", detalle: `Usuario: ${username}`, usuario: username, ip, modulo: "auth" })
+    } catch { /* ignore log errors */ }
   } catch {
     // AppUser table might not exist yet, fall through to hardcoded
   }

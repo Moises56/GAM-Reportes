@@ -36,6 +36,13 @@ export async function POST(request: Request) {
     }
 
     const result = await createUser(username, password, nombre, role)
+
+    // Log user creation
+    try {
+      const { insertLog } = await import("@/lib/queries/logs")
+      await insertLog({ accion: "Crear usuario", detalle: `Usuario: ${username}, Rol: ${role}`, usuario: user.username, modulo: "usuarios" })
+    } catch { /* ignore */ }
+
     return NextResponse.json({ success: true, id: result.id }, { status: 201 })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : ""

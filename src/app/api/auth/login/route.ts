@@ -9,7 +9,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Usuario y contraseña requeridos" }, { status: 400 })
     }
 
-    const result = await authenticate(username, password)
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"
+    const result = await authenticate(username, password, ip)
 
     if (!result) {
       return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 })

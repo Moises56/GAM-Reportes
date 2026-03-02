@@ -19,6 +19,10 @@ export async function PUT(
     // Handle password change
     if (body.newPassword) {
       await changePassword(userId, body.newPassword)
+      try {
+        const { insertLog } = await import("@/lib/queries/logs")
+        await insertLog({ accion: "Cambiar contraseña (admin)", detalle: `Usuario ID: ${userId}`, usuario: user.username, modulo: "usuarios" })
+      } catch { /* ignore */ }
       return NextResponse.json({ success: true, message: "Contraseña actualizada" })
     }
 
@@ -34,6 +38,15 @@ export async function PUT(
     if (body.activo !== undefined) data.activo = body.activo
 
     const updated = await updateUser(userId, data)
+
+    // Log the action
+    try {
+      const { insertLog } = await import("@/lib/queries/logs")
+      const changes = Object.entries(data).map(([k, v]) => `${k}: ${v}`).join(", ")
+      const accion = data.activo !== undefined ? (data.activo ? "Activar usuario" : "Desactivar usuario") : "Editar usuario"
+      await insertLog({ accion, detalle: `Usuario ID: ${userId}, ${changes}`, usuario: user.username, modulo: "usuarios" })
+    } catch { /* ignore */ }
+
     return NextResponse.json({ success: true, user: updated })
   } catch (error) {
     console.error("Users PUT error:", error)
