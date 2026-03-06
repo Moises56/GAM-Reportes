@@ -88,8 +88,8 @@ const WHITE: [number, number, number] = [255, 255, 255]
 export async function generateBoletaPDF(data: BoletaData) {
   // Letter-like format, landscape-ish to match the ticket proportion
   const W = 180
-  const H = 140
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [H, W] })
+  // Start with generous height; content determines actual border
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [160, W] })
 
   const M = 8 // margin
   const CW = W - M * 2 // content width
@@ -100,10 +100,7 @@ export async function generateBoletaPDF(data: BoletaData) {
     logoData = await loadImg("/LOGO-AMDC.png")
   } catch { /* no logo */ }
 
-  // ── OUTER BORDER ──
-  doc.setDrawColor(...LGRAY)
-  doc.setLineWidth(0.4)
-  doc.rect(M - 1, 4, CW + 2, H - 8)
+  const borderTop = 4
 
   // ══════════════════════════════════════════════
   // HEADER
@@ -129,14 +126,14 @@ export async function generateBoletaPDF(data: BoletaData) {
     W / 2, y + 10, { align: "center" }
   )
 
-  y += 16
+  y += 14
 
   // ── Horizontal line under header ──
   doc.setDrawColor(...LGRAY)
   doc.setLineWidth(0.3)
   doc.line(M, y, W - M, y)
 
-  y += 2
+  y += 1.5
 
   // ══════════════════════════════════════════════
   // TRANSPORTISTA BAR
@@ -161,7 +158,7 @@ export async function generateBoletaPDF(data: BoletaData) {
   doc.setTextColor(...BLACK)
   doc.text(data.boletaPeso, W - M - 3, y + 5.5, { align: "right" })
 
-  y += 10
+  y += 9
 
   // ══════════════════════════════════════════════
   // TWO-COLUMN SECTION
@@ -207,7 +204,7 @@ export async function generateBoletaPDF(data: BoletaData) {
   doc.setFontSize(8)
   doc.text("Tegucigalpa", rightX + rightW / 2, y + 8, { align: "center" })
 
-  y += 11
+  y += 10
 
   // ── LEFT: Motorista ──
   doc.setDrawColor(...LGRAY)
@@ -229,7 +226,7 @@ export async function generateBoletaPDF(data: BoletaData) {
   doc.setFontSize(11)
   doc.text(String(data.noBoleta), rightX + rightW - 3, y + 6, { align: "right" })
 
-  y += 10
+  y += 9
 
   // ── LEFT: Micro-ruta ──
   doc.setFont("helvetica", "bold")
@@ -250,7 +247,7 @@ export async function generateBoletaPDF(data: BoletaData) {
   doc.setFontSize(10)
   doc.text(`${fmtNum(data.pesoBruto)} LB`, rightX + rightW - 3, y + 5.5, { align: "right" })
 
-  y += 10
+  y += 9
 
   // ── LEFT: Procedencia ──
   doc.setFont("helvetica", "bold")
@@ -302,7 +299,7 @@ export async function generateBoletaPDF(data: BoletaData) {
   doc.setFontSize(8)
   doc.text(data.pesador || "—", rightX + 20, y + 4)
 
-  y += 8
+  y += 7
 
   // ── Vertical divider line between columns ──
   doc.setDrawColor(...LGRAY)
@@ -310,29 +307,30 @@ export async function generateBoletaPDF(data: BoletaData) {
   doc.line(midX, rowStartY, midX, y - 2)
 
   // ══════════════════════════════════════════════
-  // OBSERVACIÓN BAR
+  // OBSERVACIÓN (dynamic height)
   // ══════════════════════════════════════════════
+  const obsText = (data.observacion || "NINGUNA").replace(/,\s*$/, "")
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(7.5)
+  const obsLines = doc.splitTextToSize(obsText, CW - 32)
+  const obsH = Math.max(8, 5 + obsLines.length * 3.2)
+
   doc.setDrawColor(...LGRAY)
   doc.setLineWidth(0.3)
-  doc.rect(M, y, CW, 9)
-  doc.setFillColor(248, 250, 252)
-  doc.rect(M, y, CW, 9, "F")
-  doc.setDrawColor(...LGRAY)
-  doc.rect(M, y, CW, 9)
+  doc.rect(M, y, CW, obsH)
 
   doc.setFont("helvetica", "bold")
   doc.setFontSize(7.5)
   doc.setTextColor(...BLACK)
-  doc.text("Observación:", M + 3, y + 6)
+  doc.text("Observación:", M + 3, y + 5)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(8)
-  const obs = (data.observacion || "NINGUNA").substring(0, 70)
-  doc.text(obs, M + 28, y + 6)
+  doc.setFontSize(7.5)
+  doc.text(obsLines.slice(0, 3), M + 28, y + 5)
 
-  y += 12
+  y += obsH + 2
 
   // ══════════════════════════════════════════════
-  // FOOTER
+  // FOOTER: Logo + text (left)  |  QR (right)
   // ══════════════════════════════════════════════
 
   // Generate QR code with boleta info
@@ -341,8 +339,7 @@ export async function generateBoletaPDF(data: BoletaData) {
     `No: ${data.noBoleta}`,
     `Fecha: ${fmtFecha(data.fecha)} ${fmtHora(data.hora)}`,
     `Transportista: ${data.transportista}`,
-    `Unidad: ${data.unidad || "—"}`,
-    `Placa: ${data.placa || "—"}`,
+    `Unidad: ${data.unidad || "—"}  Placa: ${data.placa || "—"}`,
     `Motorista: ${data.motorista || "—"}`,
     `Micro-ruta: ${data.codigoRuta || "—"}`,
     `Procedencia: ${(data.procedencia || "—").replace(/,\s*$/, "").replace(/,\s{4}/g, ", ")}`,
@@ -350,7 +347,7 @@ export async function generateBoletaPDF(data: BoletaData) {
     `P.Tara: ${fmtNum(data.pesoTara)} LB`,
     `P.Neto: ${fmtNum(data.pesoNeto)} LB`,
     `Pesador: ${data.pesador}`,
-    `Observación: ${data.observacion || "NINGUNA"}`,
+    `Obs: ${data.observacion || "NINGUNA"}`,
   ].join("\n")
 
   let qrDataUrl: string | null = null
@@ -358,40 +355,49 @@ export async function generateBoletaPDF(data: BoletaData) {
     qrDataUrl = await QRCode.toDataURL(qrText, { width: 200, margin: 1 })
   } catch { /* no QR */ }
 
-  // QR on the right, Gerencia badge on center-left
-  const qrSize = 22
-  const qrX = W - M - qrSize - 2
-  const qrY = y
+  const qrSize = 18
+  const qrX = W - M - qrSize
 
-  if (qrDataUrl) {
-    doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize)
+  // Logo (reuse header logo, smaller) + "GERENCIA DE ASEO MUNICIPAL" text — no border
+  const footLogoSize = 14
+  const footLogoX = qrX - 44
+  const footLogoY = y
+  if (logoData) {
+    doc.addImage(logoData, "PNG", footLogoX, footLogoY, footLogoSize, footLogoSize)
   }
 
-  // Gerencia de Aseo Municipal badge (centered in remaining space)
-  const badgeCenterX = (M + qrX) / 2
-  const badgeW = 52
-  const badgeX = badgeCenterX - badgeW / 2
-  doc.setFillColor(...TEAL)
-  doc.roundedRect(badgeX, y, badgeW, 7, 1.5, 1.5, "F")
+  // Text next to logo
+  const ftxtX = footLogoX + footLogoSize + 2
   doc.setFont("helvetica", "bold")
   doc.setFontSize(7)
-  doc.setTextColor(...WHITE)
-  doc.text("GERENCIA DE ASEO MUNICIPAL", badgeCenterX, y + 4.8, { align: "center" })
+  doc.setTextColor(...TEAL)
+  doc.text("GERENCIA DE", ftxtX, footLogoY + 5)
+  doc.setFontSize(8)
+  doc.text("ASEO MUNICIPAL", ftxtX, footLogoY + 10)
 
-  y += 10
+  // QR code (right side, aligned with logo)
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, "PNG", qrX, y, qrSize, qrSize)
+  }
 
-  // Emission date bar (current date/time)
-  const emitBarX = M + 10
-  const emitBarW = qrX - M - 12
+  y += Math.max(footLogoSize, qrSize) + 1.5
+
+  // ── Emission date bar — full content width ──
   doc.setFillColor(...TEAL)
-  doc.roundedRect(emitBarX, y, emitBarW, 6, 1, 1, "F")
+  doc.roundedRect(M, y, CW, 6.5, 1.5, 1.5, "F")
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(7)
+  doc.setFontSize(6.5)
   doc.setTextColor(...WHITE)
   doc.text(
     `Emitido el ${fmtNow()}`,
-    emitBarX + emitBarW / 2, y + 4, { align: "center" }
+    M + CW / 2, y + 4.3, { align: "center" }
   )
+
+  // ── OUTER BORDER (drawn last to encompass all content) ──
+  const borderBottom = y + 6.5 + 2 // emission bar height + padding
+  doc.setDrawColor(...LGRAY)
+  doc.setLineWidth(0.4)
+  doc.rect(M - 1, borderTop, CW + 2, borderBottom - borderTop)
 
   // ── Save ──
   doc.save(`Boleta-${data.boletaPeso}.pdf`)
