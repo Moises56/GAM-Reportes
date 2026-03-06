@@ -32,6 +32,7 @@ const ROLES = [
   { value: "admin", label: "Administrador" },
   { value: "operador", label: "Operador" },
   { value: "auditor", label: "Auditor" },
+  { value: "gam-empresas", label: "GAM Empresas" },
 ]
 
 function roleBadgeVariant(role: string): "default" | "secondary" | "outline" {

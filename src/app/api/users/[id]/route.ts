@@ -30,7 +30,7 @@ export async function PUT(
     const data: { nombre?: string; role?: string; activo?: boolean } = {}
     if (body.nombre !== undefined) data.nombre = body.nombre
     if (body.role !== undefined) {
-      if (!["admin", "operador", "auditor"].includes(body.role)) {
+      if (!["admin", "operador", "auditor", "gam-empresas"].includes(body.role)) {
         return NextResponse.json({ error: "Rol inválido" }, { status: 400 })
       }
       data.role = body.role

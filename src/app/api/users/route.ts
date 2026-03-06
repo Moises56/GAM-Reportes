@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 })
     }
 
-    if (!["admin", "operador", "auditor"].includes(role)) {
+    if (!["admin", "operador", "auditor", "gam-empresas"].includes(role)) {
       return NextResponse.json({ error: "Rol inválido" }, { status: 400 })
     }
 

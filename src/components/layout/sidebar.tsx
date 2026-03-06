@@ -18,6 +18,7 @@ import {
   Hospital,
   Users,
   ScrollText,
+  Building2,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -37,6 +38,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Hospital,
   Users,
   ScrollText,
+  Building2,
 }
 
 interface SidebarProps {
@@ -118,8 +120,15 @@ export function Sidebar({ user }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <ul className="space-y-1">
           {NAV_ITEMS.filter((item) => {
+            // gam-empresas can only see Overview and Empresas
+            if (user.role === "gam-empresas") {
+              return item.href === "/dashboard/overview" || item.href === "/dashboard/empresas"
+            }
             if ("adminOnly" in item && item.adminOnly) {
               return user.role === "admin"
+            }
+            if ("roles" in item && item.roles) {
+              return (item.roles as readonly string[]).includes(user.role)
             }
             return true
           }).map((item) => {
