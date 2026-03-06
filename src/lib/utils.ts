@@ -35,6 +35,7 @@ export function formatDate(date: Date | string): string {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   })
 }
 
@@ -43,5 +44,6 @@ export function formatDateShort(date: Date | string): string {
   return d.toLocaleDateString("es-HN", {
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   })
 }

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf"
+import QRCode from "qrcode"
 
 interface BoletaData {
   fecha: string
@@ -39,6 +40,22 @@ function fmtHora(horaStr: string | null) {
 
 function fmtNum(n: number): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtNow() {
+  const now = new Date()
+  const meses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  ]
+  const dia = now.getDate()
+  const mes = meses[now.getMonth()]
+  const anio = now.getFullYear()
+  const h = now.getHours()
+  const m = now.getMinutes().toString().padStart(2, "0")
+  const ampm = h >= 12 ? "PM" : "AM"
+  const h12 = h % 12 || 12
+  return `${dia} de ${mes} del ${anio} a las ${h12.toString().padStart(2, "0")}:${m} ${ampm}`
 }
 
 async function loadImg(url: string): Promise<string> {
@@ -318,27 +335,62 @@ export async function generateBoletaPDF(data: BoletaData) {
   // FOOTER
   // ══════════════════════════════════════════════
 
-  // Gerencia de Aseo Municipal badge
+  // Generate QR code with boleta info
+  const qrText = [
+    `Boleta: ${data.boletaPeso}`,
+    `No: ${data.noBoleta}`,
+    `Fecha: ${fmtFecha(data.fecha)} ${fmtHora(data.hora)}`,
+    `Transportista: ${data.transportista}`,
+    `Unidad: ${data.unidad || "—"}`,
+    `Placa: ${data.placa || "—"}`,
+    `Motorista: ${data.motorista || "—"}`,
+    `Micro-ruta: ${data.codigoRuta || "—"}`,
+    `Procedencia: ${(data.procedencia || "—").replace(/,\s*$/, "").replace(/,\s{4}/g, ", ")}`,
+    `P.Bruto: ${fmtNum(data.pesoBruto)} LB`,
+    `P.Tara: ${fmtNum(data.pesoTara)} LB`,
+    `P.Neto: ${fmtNum(data.pesoNeto)} LB`,
+    `Pesador: ${data.pesador}`,
+    `Observación: ${data.observacion || "NINGUNA"}`,
+  ].join("\n")
+
+  let qrDataUrl: string | null = null
+  try {
+    qrDataUrl = await QRCode.toDataURL(qrText, { width: 200, margin: 1 })
+  } catch { /* no QR */ }
+
+  // QR on the right, Gerencia badge on center-left
+  const qrSize = 22
+  const qrX = W - M - qrSize - 2
+  const qrY = y
+
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize)
+  }
+
+  // Gerencia de Aseo Municipal badge (centered in remaining space)
+  const badgeCenterX = (M + qrX) / 2
   const badgeW = 52
-  const badgeX = W / 2 - badgeW / 2
+  const badgeX = badgeCenterX - badgeW / 2
   doc.setFillColor(...TEAL)
   doc.roundedRect(badgeX, y, badgeW, 7, 1.5, 1.5, "F")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(7)
   doc.setTextColor(...WHITE)
-  doc.text("GERENCIA DE ASEO MUNICIPAL", W / 2, y + 4.8, { align: "center" })
+  doc.text("GERENCIA DE ASEO MUNICIPAL", badgeCenterX, y + 4.8, { align: "center" })
 
   y += 10
 
-  // Emission date bar
+  // Emission date bar (current date/time)
+  const emitBarX = M + 10
+  const emitBarW = qrX - M - 12
   doc.setFillColor(...TEAL)
-  doc.roundedRect(M + 20, y, CW - 40, 6, 1, 1, "F")
+  doc.roundedRect(emitBarX, y, emitBarW, 6, 1, 1, "F")
   doc.setFont("helvetica", "normal")
   doc.setFontSize(7)
   doc.setTextColor(...WHITE)
   doc.text(
-    `Emitido el ${fmtFecha(data.fecha)} a las ${fmtHora(data.hora)}`,
-    W / 2, y + 4, { align: "center" }
+    `Emitido el ${fmtNow()}`,
+    emitBarX + emitBarW / 2, y + 4, { align: "center" }
   )
 
   // ── Save ──
