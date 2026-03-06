@@ -7,6 +7,7 @@ import { getFlotaResumen } from "@/lib/queries/flota"
 import { getRutasResumen } from "@/lib/queries/rutas"
 import { getMultas, getMermas } from "@/lib/queries/multas"
 import { getFacturacionMensual } from "@/lib/queries/facturacion"
+import { getEmpresasBoletas } from "@/lib/queries/empresas"
 import { lbsToTons } from "@/lib/utils"
 
 export async function GET(request: Request) {
@@ -111,6 +112,34 @@ export async function GET(request: Request) {
           Bolsas: row.bolsas,
         }))
         sheetName = "Bascula"
+        break
+      }
+      case "empresas": {
+        const empFilters = {
+          fechaInicio: searchParams.get("fechaInicio") || undefined,
+          fechaFin: searchParams.get("fechaFin") || undefined,
+          transportistaId: searchParams.get("transportistaId") ? Number(searchParams.get("transportistaId")) : undefined,
+          search: searchParams.get("search") || undefined,
+        }
+        const result = await getEmpresasBoletas(empFilters, 1, 50000)
+        data = result.data.map((row: Record<string, unknown>) => ({
+          Fecha: row.fecha,
+          Hora: row.hora,
+          Unidad: row.unidad,
+          Empresa: row.transportista,
+          Motorista: row.motorista,
+          Placa: row.placa,
+          "Micro Ruta": row.codigoRuta,
+          Procedencia: row.procedencia,
+          "P. Bruto": row.pesoBruto,
+          "P. Tara": row.pesoTara,
+          "P. Neto": row.pesoNeto,
+          "No. Boleta": row.noBoleta,
+          "Boleta Peso": row.boletaPeso,
+          Pesador: row.pesador,
+          Observación: row.observacion,
+        }))
+        sheetName = "Empresas"
         break
       }
     }

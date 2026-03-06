@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { formatNumber, formatDate } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, Search, X, FileDown, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, X, FileDown, Download, Loader2 } from "lucide-react"
 import { DateRangePicker } from "@/components/dashboard/date-range-picker"
 import { useFilters } from "@/hooks/use-filters"
 // Lazy load PDF generator to avoid bundling jsPDF with initial page load
@@ -53,11 +53,36 @@ function formatHora(horaStr: string | null) {
 
 function EmpresasFilters() {
   const { getFilter, setFilter, clearFilters } = useFilters()
+  const searchParams = useSearchParams()
   const [searchInput, setSearchInput] = useState(getFilter("search") || "")
+  const [exporting, setExporting] = useState(false)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setFilter("search", searchInput || undefined)
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("tipo", "empresas")
+      const response = await fetch(`/api/export/excel?${params.toString()}`)
+      if (!response.ok) throw new Error("Export failed")
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `GAM_Empresas_${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Export error:", error)
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -88,6 +113,18 @@ function EmpresasFilters() {
       >
         <X className="h-3 w-3" />
         Limpiar
+      </button>
+      <button
+        onClick={handleExport}
+        disabled={exporting}
+        className="flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+      >
+        {exporting ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Download className="h-3.5 w-3.5" />
+        )}
+        Excel
       </button>
     </div>
   )
